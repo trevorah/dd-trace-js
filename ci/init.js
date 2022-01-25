@@ -5,6 +5,9 @@ tracer.init({
   startupLogs: false,
   tags: {
     [ORIGIN_KEY]: 'ciapp-test'
+  },
+  experimental: {
+    exporter: 'ci'
   }
 })
 
