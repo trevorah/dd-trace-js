@@ -1,9 +1,7 @@
 'use strict'
 
 const request = require('./request')
-const { startupLog } = require('../../startup-log')
 const log = require('../../log')
-const tracerVersion = require('../../../lib/version')
 
 const { CiEncoder } = require('../../encode/ci')
 
@@ -19,15 +17,15 @@ class Writer {
     this._encode(spans)
   }
 
-  _sendPayload (data, count, done) {
-    makeRequest(data, count, this._url, (err, res, status) => {
-      startupLog({ agentError: err })
+  _sendPayload (data, done) {
+    makeRequest(data, this._url, (err, res, status) => {
       if (err) {
         log.error(err)
         done()
         return
       }
-      log.debug(`Response from the agent: ${res}`)
+      this._encoder.reset()
+      log.error(`Response from the intake: ${res}`)
       done()
     })
   }
@@ -46,49 +44,31 @@ class Writer {
     if (count > 0) {
       const payload = this._encoder.makePayload()
 
-      this._sendPayload(payload, count, done)
+      this._sendPayload(payload, done)
     } else {
       done()
     }
   }
 }
 
-function setHeader (headers, key, value) {
-  if (value) {
-    headers[key] = value
-  }
-}
-
-function makeRequest (data, count, url, cb) {
+function makeRequest (data, url, cb) {
   const options = {
-    path: `/`,
-    method: 'PUT',
+    path: '/api/v2/citestcycle',
+    method: 'POST',
     headers: {
-      'Content-Type': 'application/msgpack',
-      'Datadog-Meta-Tracer-Version': tracerVersion,
-      'X-Datadog-Trace-Count': String(count)
-    }
+      'Content-Type': 'application/json',
+      'dd-api-key': process.env.DATADOG_API_KEY
+    },
+    timeout: 5000
   }
 
-  setHeader(options.headers, 'Datadog-Meta-Lang', 'nodejs')
-  setHeader(options.headers, 'Datadog-Meta-Lang-Version', process.version)
-  setHeader(options.headers, 'Datadog-Meta-Lang-Interpreter', process.jsEngine || 'v8')
+  options.protocol = url.protocol
+  options.hostname = url.hostname
+  options.port = url.port
 
-  if (url.protocol === 'unix:') {
-    options.socketPath = url.pathname
-  } else {
-    options.protocol = url.protocol
-    options.hostname = url.hostname
-    options.port = url.port
-  }
+  log.debug(() => `Request to the intake: ${JSON.stringify(options)}`)
 
-  log.debug(() => `Request to the agent: ${JSON.stringify(options)}`)
-
-  request(Object.assign({ data }, options), (err, res, status) => {
-    // Note that logging will only happen once, regardless of how many times this is called.
-    startupLog({
-      agentError: status !== 404 && status !== 200 ? err : undefined
-    })
+  request(data, options, (err, res, status) => {
     cb(err, res, status)
   })
 }

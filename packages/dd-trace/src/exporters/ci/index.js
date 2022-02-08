@@ -6,8 +6,8 @@ const Writer = require('./writer')
 const Scheduler = require('./scheduler')
 
 class AgentExporter {
-  constructor ({ url, flushInterval }) {
-    this._url = url
+  constructor ({ flushInterval }) {
+    this._url = new URL('https://citestcycle-intake.datad0g.com')
     this._writer = new Writer({ url: this._url })
 
     if (flushInterval > 0) {

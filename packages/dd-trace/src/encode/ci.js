@@ -1,88 +1,48 @@
 'use strict'
+const uuid = require('crypto-randomuuid')
+const tracerVersion = require('../../lib/version')
+
+const ENCODING_VERSION = '1'
 
 class CiEncoder {
-  constructor (writer) {
-    this._writer = writer
+  constructor () {
+    this._events = []
   }
 
   count () {
-
+    return this._events.length
   }
 
   encode (trace) {
-
+    this._events = this._events.concat(trace)
   }
 
   makePayload () {
-
+    const payload = JSON.stringify({
+      version: ENCODING_VERSION,
+      metadata: {
+        runtime_id: uuid(),
+        'ci_library.language': 'javascript',
+        'ci_library.version': tracerVersion,
+        'language_interpreter': 'nodejs',
+        'language_version': process.version,
+        'env': 'testing-juan',
+        'service': 'testing-agentless'
+      },
+      events: this._events.map(span => {
+        return {
+          type: 'test',
+          version: ENCODING_VERSION,
+          content: span
+        }
+      })
+    })
+    this.reset()
+    return payload
   }
 
-  _encode (bytes, trace) {
-
-  }
-
-  _reset () {
-
-  }
-
-  _encodeArrayPrefix () {
-
-  }
-
-  _encodeByte () {
-
-  }
-
-  _encodeId () {
-
-  }
-
-  _encodeInteger () {
-
-  }
-
-  _encodeLong () {
-
-  }
-
-  _encodeMap () {
-
-  }
-
-  _encodeValue (bytes, value) {
-    switch (typeof value) {
-      case 'string':
-        this._encodeString(bytes, value)
-        break
-      case 'number':
-        this._encodeFloat(bytes, value)
-        break
-      default:
-        // should not happen
-    }
-  }
-
-  _encodeString (bytes, value = '') {
-
-  }
-
-  _encodeFloat () {
-
-  }
-
-  _cacheString (value) {
-
-  }
-
-  _writeArrayPrefix () {
-
-  }
-
-  _writeStrings (buffer, offset) {
-  }
-
-  _writeTraces () {
-
+  reset () {
+    this._events = []
   }
 }
 
