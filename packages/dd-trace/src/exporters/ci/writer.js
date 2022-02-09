@@ -25,7 +25,7 @@ class Writer {
         return
       }
       this._encoder.reset()
-      log.error(`Response from the intake: ${res}`)
+      log.debug(`Response from the intake: ${res}`)
       done()
     })
   }
