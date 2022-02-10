@@ -1,13 +1,13 @@
 'use strict'
 
 module.exports = {
-  // 'amqp10': require('../../../datadog-plugin-amqp10/src'),
-  // 'amqplib': require('../../../datadog-plugin-amqplib/src'),
-  // 'aws-sdk': require('../../../datadog-plugin-aws-sdk/src'),
-  // 'bunyan': require('../../../datadog-plugin-bunyan/src'),
-  // 'cassandra-driver': require('../../../datadog-plugin-cassandra-driver/src'),
-  // 'connect': require('../../../datadog-plugin-connect/src'),
-  // 'couchbase': require('../../../datadog-plugin-couchbase/src'),
+  'amqp10': require('../../../datadog-plugin-amqp10/src'),
+  'amqplib': require('../../../datadog-plugin-amqplib/src'),
+  'aws-sdk': require('../../../datadog-plugin-aws-sdk/src'),
+  'bunyan': require('../../../datadog-plugin-bunyan/src'),
+  'cassandra-driver': require('../../../datadog-plugin-cassandra-driver/src'),
+  'connect': require('../../../datadog-plugin-connect/src'),
+  'couchbase': require('../../../datadog-plugin-couchbase/src'),
   'cucumber': require('../../../datadog-plugin-cucumber/src'),
   'cypress': require('../../../datadog-plugin-cypress/src'),
   // 'dns': require('../../../datadog-plugin-dns/src'),

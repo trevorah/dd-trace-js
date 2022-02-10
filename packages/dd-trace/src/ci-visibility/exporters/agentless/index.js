@@ -1,14 +1,15 @@
 'use strict'
 
 const URL = require('url').URL
-const log = require('../../log')
+const log = require('../../../log')
 const Writer = require('./writer')
 const Scheduler = require('./scheduler')
 
-class AgentExporter {
-  constructor ({ flushInterval }) {
+class AgentlessCiVisibilityExporter {
+  constructor (config) {
+    const { flushInterval, tags } = config
     this._url = new URL('https://citestcycle-intake.datad0g.com')
-    this._writer = new Writer({ url: this._url })
+    this._writer = new Writer({ url: this._url, tags })
 
     if (flushInterval > 0) {
       this._scheduler = new Scheduler(() => this._writer.flush(), flushInterval)
@@ -26,8 +27,8 @@ class AgentExporter {
     }
   }
 
-  export (spans) {
-    this._writer.append(spans)
+  export (trace) {
+    this._writer.append(trace)
 
     if (!this._scheduler) {
       this._writer.flush()
@@ -35,4 +36,4 @@ class AgentExporter {
   }
 }
 
-module.exports = AgentExporter
+module.exports = AgentlessCiVisibilityExporter

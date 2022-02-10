@@ -1,24 +1,25 @@
 'use strict'
 
 const request = require('./request')
-const log = require('../../log')
+const log = require('../../../log')
 
-const { CiEncoder } = require('../../encode/ci')
+const { AgentlessCiVisibilityEncoder } = require('../../../encode/agentless-ci-visibility')
 
 class Writer {
-  constructor ({ url }) {
+  constructor ({ url, tags }) {
+    const { 'runtime-id': runtimeId, env, service } = tags
     this._url = url
-    this._encoder = new CiEncoder(this)
+    this._encoder = new AgentlessCiVisibilityEncoder({ runtimeId, env, service })
   }
 
-  append (spans) {
-    log.debug(() => `Encoding trace: ${JSON.stringify(spans)}`)
+  append (trace) {
+    log.debug(() => `Encoding trace: ${JSON.stringify(trace)}`)
 
-    this._encode(spans)
+    this._encode(trace)
   }
 
   _sendPayload (data, done) {
-    makeRequest(data, this._url, (err, res, status) => {
+    makeRequest(data, this._url, (err, res) => {
       if (err) {
         log.error(err)
         done()
@@ -68,8 +69,8 @@ function makeRequest (data, url, cb) {
 
   log.debug(() => `Request to the intake: ${JSON.stringify(options)}`)
 
-  request(data, options, (err, res, status) => {
-    cb(err, res, status)
+  request(data, options, (err, res) => {
+    cb(err, res)
   })
 }
 
