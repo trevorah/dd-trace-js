@@ -57,10 +57,12 @@ function makeRequest (data, url, cb) {
     path: '/api/v2/citestcycle',
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
-      'dd-api-key': process.env.DATADOG_API_KEY
+      'Content-Type': 'application/json'
     },
     timeout: 5000
+  }
+  if (process.env.DATADOG_API_KEY) {
+    options.headers['dd-api-key'] = process.env.DATADOG_API_KEY
   }
 
   options.protocol = url.protocol
