@@ -4,8 +4,6 @@ const https = require('https')
 const http = require('http')
 
 function request (data, options, callback) {
-  options.headers['Content-Length'] = data.length
-
   const client = options.protocol === 'https:' ? https : http
 
   const request = client.request(options, res => {
