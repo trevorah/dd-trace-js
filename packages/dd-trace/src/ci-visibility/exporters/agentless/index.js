@@ -34,6 +34,10 @@ class AgentlessCiVisibilityExporter {
       this._writer.flush()
     }
   }
+
+  flush () {
+    this._writer.flush()
+  }
 }
 
 module.exports = AgentlessCiVisibilityExporter
