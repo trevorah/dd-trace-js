@@ -1,13 +1,13 @@
 'use strict'
 const tracerVersion = require('../../lib/version')
-const { truncateSpan } = require('./truncate-tags')
+const { truncateSpan, normalizeSpan } = require('./tags-processors')
 const ENCODING_VERSION = '1'
 
 function formatSpan (span) {
   return {
     type: span.type === 'test' ? 'test' : 'span',
     version: ENCODING_VERSION,
-    content: truncateSpan(span)
+    content: normalizeSpan(truncateSpan(span))
   }
 }
 
