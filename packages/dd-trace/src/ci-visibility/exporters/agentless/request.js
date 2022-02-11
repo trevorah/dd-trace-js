@@ -18,7 +18,7 @@ function request (data, options, callback) {
       if (res.statusCode >= 200 && res.statusCode <= 299) {
         callback(null, responseData, res.statusCode)
       } else {
-        const error = new Error(`Error from the intake: ${res.statusCode} ${https.STATUS_CODES[res.statusCode]}`)
+        const error = new Error(`Error from the intake: ${res.statusCode} ${http.STATUS_CODES[res.statusCode]}`)
         error.status = res.statusCode
 
         callback(error, null, res.statusCode)
