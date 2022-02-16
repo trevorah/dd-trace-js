@@ -5,9 +5,7 @@ const analyticsSampler = require('../../dd-trace/src/analytics_sampler')
 const awsHelpers = require('./helpers')
 
 function createWrapSmithyClient (tracer, config) {
-  console.log('wrapping smithy')
   return function wrapSmithyClient(SmithyClient) {
-    console.log('smithy', SmithyClient+'')
     return class Client extends SmithyClient {
       constructor(...args) {
         let clientConfig = args[0];
