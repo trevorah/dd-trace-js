@@ -4,6 +4,48 @@ const Tags = require('opentracing').Tags
 const analyticsSampler = require('../../dd-trace/src/analytics_sampler')
 const awsHelpers = require('./helpers')
 
+function createWrapSmithyClient (tracer, config) {
+  console.log('wrapping smithy')
+  return function wrapSmithyClient(SmithyClient) {
+    console.log('smithy', SmithyClient+'')
+    return class Client extends SmithyClient {
+      constructor(...args) {
+        let clientConfig = args[0];
+        super(...args);
+        this.middlewareStack.add(
+          (next, context) => async (args) => {
+            if (context.clientName) {
+              const serviceName = getServiceName(context.clientName.toLowerCase().replace(/client$/, ''), tracer, config)
+              const childOf = tracer.scope().active()
+              const tags = {
+                [Tags.SPAN_KIND]: 'client',
+                'service.name': serviceName,
+                'aws.operation': context.commandName,
+                'aws.region': await clientConfig.region(),
+                // 'aws.service': context.clientName,
+                'component': 'aws-sdk'
+              }
+              const span = tracer.startSpan('aws.request', {
+                childOf,
+                tags
+              })
+              try {
+                const result = await next(args)
+                awsHelpers.finish(span, null)
+                return result
+              } catch (error) {
+                awsHelpers.finish(span, error)
+                throw error
+              }
+            }
+          },
+          { priority: "high" }
+        )
+      }
+    }
+  }
+}
+
 function createWrapRequest (tracer, config) {
   config = normalizeConfig(config)
   return function wrapRequest (send) {
@@ -90,9 +132,28 @@ function getServiceName (serviceIdentifier, tracer, config) {
     : `${tracer._service}-aws-${serviceIdentifier}`
 }
 
-// <2.1.35 has breaking changes for instrumentation
-// https://github.com/aws/aws-sdk-js/pull/629
 module.exports = [
+  // >= 3.0.0 is wildly different
+  {
+    name: '@aws-sdk/smithy-client',
+    versions: ['>=3.0.0'],
+    patch (smithy, tracer, config) {
+      const wrappedClient = createWrapSmithyClient(tracer, config)(smithy.Client);
+      const exportDescriptors = Object.getOwnPropertyDescriptors(smithy);
+      exportDescriptors.Client = {
+        enumerable: true,
+        get() {
+          return exports[Symbol.for('patched')] ? wrappedClient : smithy.Client;
+        }
+      };
+      const exports = Object.defineProperties({}, exportDescriptors);
+      exports[Symbol.for('patched')] = true;
+      return exports;
+    },
+    unpatch (smithy) {
+      smithy[Symbol.for('patched')] = false;
+    }
+  },
   {
     name: 'aws-sdk',
     versions: ['>=2.3.0'],
@@ -105,6 +166,8 @@ module.exports = [
       this.unwrap(AWS.config, 'setPromisesDependency')
     }
   },
+  // <2.1.35 has breaking changes for instrumentation
+  // https://github.com/aws/aws-sdk-js/pull/629
   {
     name: 'aws-sdk',
     versions: ['>=2.1.35'],
