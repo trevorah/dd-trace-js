@@ -1,7 +1,7 @@
 'use strict'
 const tracerVersion = require('../../lib/version')
 const { truncateSpan, normalizeSpan } = require('./tags-processors')
-const ENCODING_VERSION = '1'
+const ENCODING_VERSION = 1
 
 function formatSpan (span) {
   return {

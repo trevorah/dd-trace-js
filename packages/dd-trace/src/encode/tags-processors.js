@@ -58,6 +58,10 @@ function truncateSpan (span) {
 function normalizeSpan (span) {
   return fromEntries(Object.entries(span).map(([key, value]) => {
     switch (key) {
+      case 'span_id':
+      case 'trace_id':
+      case 'parent_id':
+        return [key, value.toString(10)]
       case 'service':
         if (!value) {
           return [key, DEFAULT_SERVICE_NAME]
