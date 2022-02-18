@@ -60,22 +60,6 @@ function Hook (modules, options, onrequire) {
       return self.cache[filename].exports
     }
 
-    // Check if this module has a patcher in-progress already.
-    // Otherwise, mark this module as patching in-progress.
-    const patched = patching[filename]
-    if (!patched) {
-      patching[filename] = true
-    }
-
-    const exports = origRequire.apply(this, arguments)
-
-    // If it's already patched, just return it as-is.
-    if (patched) return exports
-
-    // The module has already been loaded,
-    // so the patching mark can be cleaned up.
-    delete patching[filename]
-
     if (core) {
       if (modules && modules.indexOf(filename) === -1) return PASS // abort if module name isn't on whitelist
       name = filename
@@ -91,7 +75,7 @@ function Hook (modules, options, onrequire) {
       const paths = Module._resolveLookupPaths(name, this, true)
       if (!paths) {
         // abort if _resolveLookupPaths return null
-        return exports
+        return PASS
       }
       const res = Module._findPath(name, [basedir, ...paths])
       if (res !== filename) {
@@ -100,6 +84,22 @@ function Hook (modules, options, onrequire) {
         name = name + path.sep + path.relative(basedir, filename)
       }
     }
+
+    // Check if this module has a patcher in-progress already.
+    // Otherwise, mark this module as patching in-progress.
+    const patched = patching[filename]
+    if (!patched) {
+      patching[filename] = true
+    }
+
+    const exports = origRequire.apply(this, arguments)
+
+    // If it's already patched, just return it as-is.
+    if (patched) return exports
+
+    // The module has already been loaded,
+    // so the patching mark can be cleaned up.
+    delete patching[filename]
 
     // ensure that the cache entry is assigned a value before calling
     // onrequire, in case calling onrequire requires the same module.
