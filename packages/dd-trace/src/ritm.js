@@ -41,19 +41,11 @@ function Hook (modules, options, onrequire) {
   options = options || {}
 
   this.cache = {}
-  this._unhooked = false
 
   const self = this
   const patching = {}
 
   this._require = function (request) {
-    if (self._unhooked) {
-      // if the patched require function could not be removed because
-      // someone else patched it after it was patched here, we just
-      // abort and pass the request onwards to the original require
-      return PASS
-    }
-
     const filename = Module._resolveFilename(request, this)
     const core = filename.indexOf(path.sep) === -1
     let name, basedir
