@@ -4,14 +4,27 @@ const path = require('path')
 const Module = require('module')
 const parse = require('module-details-from-path')
 
+const PASS = Symbol('pass')
+
 const origRequire = Module.prototype.require
 
 // derived from require-in-the-middle@3 with tweaks
 
 module.exports = Hook
 
+const hookStack = []
+
 Hook.reset = function () {
-  Module.prototype.require = origRequire
+  hookStack.length = 0
+}
+
+Module.prototype.require = function require (request) {
+  for (const hook of hookStack) {
+    const exports = hook._require.apply(this, arguments)
+    if (exports !== PASS) return exports
+  }
+
+  return origRequire.apply(this, arguments)
 }
 
 function Hook (modules, options, onrequire) {
@@ -29,17 +42,16 @@ function Hook (modules, options, onrequire) {
 
   this.cache = {}
   this._unhooked = false
-  this._origRequire = Module.prototype.require
 
   const self = this
   const patching = {}
 
-  this._require = Module.prototype.require = function (request) {
+  this._require = function (request) {
     if (self._unhooked) {
       // if the patched require function could not be removed because
       // someone else patched it after it was patched here, we just
       // abort and pass the request onwards to the original require
-      return self._origRequire.apply(this, arguments)
+      return PASS
     }
 
     const filename = Module._resolveFilename(request, this)
@@ -63,7 +75,7 @@ function Hook (modules, options, onrequire) {
       patching[filename] = true
     }
 
-    const exports = self._origRequire.apply(this, arguments)
+    const exports = origRequire.apply(this, arguments)
 
     // If it's already patched, just return it as-is.
     if (patched) return exports
@@ -73,15 +85,15 @@ function Hook (modules, options, onrequire) {
     delete patching[filename]
 
     if (core) {
-      if (modules && modules.indexOf(filename) === -1) return exports // abort if module name isn't on whitelist
+      if (modules && modules.indexOf(filename) === -1) return PASS // abort if module name isn't on whitelist
       name = filename
     } else {
       const stat = parse(filename)
-      if (!stat) return exports // abort if filename could not be parsed
+      if (!stat) return PASS // abort if filename could not be parsed
       name = stat.name
       basedir = stat.basedir
 
-      if (modules && modules.indexOf(name) === -1) return exports // abort if module name isn't on whitelist
+      if (modules && modules.indexOf(name) === -1) return PASS // abort if module name isn't on whitelist
 
       // figure out if this is the main module file, or a file inside the module
       const paths = Module._resolveLookupPaths(name, this, true)
@@ -105,4 +117,6 @@ function Hook (modules, options, onrequire) {
 
     return self.cache[filename].exports
   }
+
+  hookStack.unshift(this)
 }
