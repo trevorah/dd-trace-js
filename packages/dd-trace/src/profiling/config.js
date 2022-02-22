@@ -6,6 +6,7 @@ const { URL } = require('url')
 const { AgentExporter } = require('./exporters/agent')
 const { FileExporter } = require('./exporters/file')
 const { ConsoleLogger } = require('./loggers/console')
+const CpuProfiler = require('./profilers/cpu')
 const WallProfiler = require('./profilers/wall')
 const SpaceProfiler = require('./profilers/space')
 const { tagger } = require('./tagger')
@@ -104,6 +105,8 @@ function getProfiler (name, options) {
       return new WallProfiler(options)
     case 'space':
       return new SpaceProfiler(options)
+    case 'cpu':
+      return new CpuProfiler(options)
     default:
       options.logger.error(`Unknown profiler "${name}"`)
   }
