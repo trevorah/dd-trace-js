@@ -19,12 +19,15 @@ Hook.reset = function () {
 }
 
 Module.prototype.require = function require (request) {
+  let exports
   for (const hook of hookStack) {
-    const exports = hook._require.apply(this, arguments)
-    if (exports !== PASS) return exports
+    const newExports = hook._require.apply(this, [...arguments, exports])
+    if (newExports !== PASS) {
+      exports = newExports
+    }
   }
 
-  return origRequire.apply(this, arguments)
+  return exports || origRequire.apply(this, arguments)
 }
 
 function Hook (modules, options, onrequire) {
@@ -45,7 +48,7 @@ function Hook (modules, options, onrequire) {
   const self = this
   const patching = {}
 
-  this._require = function (request) {
+  this._require = function (request, exports) {
     const filename = Module._resolveFilename(request, this)
     const core = filename.indexOf(path.sep) === -1
     let name, basedir
@@ -92,10 +95,10 @@ function Hook (modules, options, onrequire) {
       patching[filename] = true
     }
 
-    const exports = origRequire.apply(this, arguments)
-
     // If it's already patched, just return it as-is.
-    if (patched) return exports
+    if (patched) return PASS
+
+    exports = exports || origRequire.apply(this, arguments)
 
     // The module has already been loaded,
     // so the patching mark can be cleaned up.
