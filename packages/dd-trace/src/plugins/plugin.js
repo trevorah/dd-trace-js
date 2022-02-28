@@ -2,12 +2,13 @@
 
 const dc = require('diagnostics_channel')
 const { storage } = require('../../../datadog-core')
+const { isStore } = require('../../../datadog-core/src/storage/helpers')
 
 /**
  * @typedef { import('diagnostics_channel').ChannelListener } ChannelListener
  * @typedef { import('../../../..').Span } Span
  * @typedef { import('../proxy') } TracerProxy
- * @typedef { import('../../../datadog-core/src/storage/async_resource').PropertyBag } PropertyBag
+ * @typedef { import('../../../datadog-core/src/storage/helpers').Store } Store
  * @typedef { { enabled?: boolean, [key: string]: unknown } } PluginConfig
  */
 
@@ -45,7 +46,7 @@ module.exports = class Plugin {
     /** @type {Subscription[]} */
     this._subscriptions = []
     this._enabled = false
-    /** @type {PropertyBag[]} */
+    /** @type {Store[]} */
     this._storeStack = []
     this._tracer = tracer
   }
@@ -56,12 +57,12 @@ module.exports = class Plugin {
 
   /**
    * @param {Span} span
-   * @param {object} store
+   * @param {Store} store
    */
   enter (span, store) {
     store = store || storage.getStore()
-    if (!store) {
-      throw new TypeError('no store');
+    if (!isStore(store)) {
+      throw new TypeError('no store')
     }
     this._storeStack.push(store)
     storage.enterWith({ ...store, span })
@@ -70,6 +71,9 @@ module.exports = class Plugin {
   /** Prevents creation of spans here and for all async descendants. */
   skip () {
     const store = storage.getStore()
+    if (!isStore(store)) {
+      throw new TypeError('no store')
+    }
     this._storeStack.push(store)
     storage.enterWith({ noop: true })
   }

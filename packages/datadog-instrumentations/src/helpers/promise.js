@@ -2,7 +2,16 @@
 
 const { AsyncResource } = require('async_hooks')
 
+/**
+ * @param {function} origThen
+ */
 exports.wrapThen = function wrapThen (origThen) {
+  /**
+   * @param {function} onFulfilled
+   * @param {function} onRejected
+   * @param {function?} onProgress
+   * @this Promise<unknown>
+   */
   return function then (onFulfilled, onRejected, onProgress) {
     const ar = new AsyncResource('bound-anonymous-fn')
 
@@ -18,9 +27,14 @@ exports.wrapThen = function wrapThen (origThen) {
   }
 }
 
+/**
+ * @param {AsyncResource} ar
+ * @param {function} callback
+ */
 function wrapCallback (ar, callback) {
   if (typeof callback !== 'function') return callback
 
+  /** @this {unknown} */
   return function () {
     return ar.runInAsyncScope(() => {
       return callback.apply(this, arguments)

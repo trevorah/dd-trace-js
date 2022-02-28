@@ -10,7 +10,15 @@ const requirePackageJson = require('../../../dd-trace/src/require-package-json')
 const { AsyncResource } = require('async_hooks')
 
 const pathSepExpr = new RegExp(`\\${path.sep}`, 'g')
+/** @type { { [name: string]: dc.Channel } } */
 const channelMap = {}
+
+/** @typedef { { name: string, versions: string[]?, file: string? } } Instrumentation */
+
+/**
+ * @param {string} name
+ * @return dc.Channel
+ */
 exports.channel = function channel (name) {
   const maybe = channelMap[name]
   if (maybe) return maybe
@@ -19,36 +27,65 @@ exports.channel = function channel (name) {
   return ch
 }
 
-exports.addHook = function addHook ({ name, versions, file }, hook) {
-  file = filename(name, file)
+/**
+ * @param {Instrumentation} instrumentation
+ * @param { (exports: unknown) => unknown } hook
+ */
+exports.addHook = function addHook (instrumentation, hook) {
+  const file = filename(instrumentation.name, instrumentation.file)
+  /**
+   * @param {unknown} moduleExports
+   * @param {string} moduleName
+   * @param {string} moduleBaseDir
+   */
   const loaderHook = (moduleExports, moduleName, moduleBaseDir) => {
     moduleName = moduleName.replace(pathSepExpr, '/')
     const moduleVersion = getVersion(moduleBaseDir)
-    if (moduleName !== file || !matchVersion(moduleVersion, versions)) {
+    if (moduleName !== file || !matchVersion(moduleVersion, instrumentation.versions)) {
       return moduleExports
     }
     return hook(moduleExports)
   }
-  ritm([name], loaderHook)
-  cjsPostLoad({ name, versions, file }, hook)
-  iitm([name], loaderHook)
+  ritm([instrumentation.name], loaderHook)
+  cjsPostLoad(instrumentation, hook)
+  iitm([instrumentation.name], loaderHook)
 }
 
+/**
+ * @param {string | undefined} version
+ * @param {string[]?} ranges
+ */
 function matchVersion (version, ranges) {
-  return !version || (ranges && ranges.some(range => semver.satisfies(semver.coerce(version), range)))
+  return !!(!version || (ranges && ranges.some(range => semver.satisfies(semver.coerce(version), range))))
 }
 
+/**
+ * @param {string} moduleBaseDir
+ * @return string | undefined
+ */
 function getVersion (moduleBaseDir) {
   if (moduleBaseDir) {
-    return requirePackageJson(moduleBaseDir, module).version
+    const packageJson = requirePackageJson(moduleBaseDir, module)
+    const version = packageJson.version
+    if (typeof version === 'string') {
+      return version
+    }
   }
 }
 
+/**
+ * @param {string} name
+ * @param {string|undefined} file
+ */
 function filename (name, file) {
   return [name, file].filter(val => val).join('/')
 }
 
 // TODO this is basically Loader#_getModules + running the hook. DRY up.
+/**
+ * @param {Instrumentation} instrumentation
+ * @param { (exports: unknown) => unknown } hook
+ */
 function cjsPostLoad (instrumentation, hook) {
   const ids = Object.keys(require.cache)
 
@@ -56,8 +93,11 @@ function cjsPostLoad (instrumentation, hook) {
 
   for (let i = 0, l = ids.length; i < l; i++) {
     if (ids[i] === instrumentation.name) {
-      hook(require.cache[ids[i]].exports)
-      continue
+      const mod = require.cache[ids[i]]
+      if (mod && mod.exports) {
+        hook(mod.exports)
+        continue
+      }
     }
 
     const id = ids[i].replace(pathSepExpr, '/')
@@ -85,6 +125,7 @@ function cjsPostLoad (instrumentation, hook) {
   }
 }
 
+/** @param {string} id */
 function getBasedir (id) {
   return parse(id).basedir.replace(pathSepExpr, '/')
 }

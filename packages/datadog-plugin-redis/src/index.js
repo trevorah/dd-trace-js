@@ -77,7 +77,7 @@ class RedisPlugin extends Plugin {
 
       analyticsSampler.sample(span, this.config.measured)
 
-      if (connectionOptions) {
+      if (isBag(connectionOptions)) {
         span.addTags({
           'out.host': connectionOptions.host,
           'out.port': connectionOptions.port
@@ -100,12 +100,18 @@ class RedisPlugin extends Plugin {
     })
 
     this.addSub(`apm:${this.constructor.name}:command:error`, err => {
-      const span = storage.getStore().span
+      const store = storage.getStore()
+      if (!store) return
+      const { span } = store
+      if (!span) return
       span.setTag('error', err)
     })
 
     this.addSub(`apm:${this.constructor.name}:command:async-end`, () => {
-      const span = storage.getStore().span
+      const store = storage.getStore()
+      if (!store) return
+      const { span } = store
+      if (!span) return
       span.finish()
     })
   }
@@ -118,6 +124,10 @@ class RedisPlugin extends Plugin {
   }
 }
 
+/**
+ * @param {string} command
+ * @param {unknown[]} args
+ */
 function formatCommand (command, args) {
   command = command.toUpperCase()
 
@@ -134,6 +144,9 @@ function formatCommand (command, args) {
   return command
 }
 
+/**
+ * @param {unknown} arg
+ */
 function formatArg (arg) {
   switch (typeof arg) {
     case 'string':
@@ -144,6 +157,10 @@ function formatArg (arg) {
   }
 }
 
+/**
+ * @param {string} str
+ * @param {number} maxlen
+ */
 function trim (str, maxlen) {
   if (str.length > maxlen) {
     str = str.substr(0, maxlen - 3) + '...'

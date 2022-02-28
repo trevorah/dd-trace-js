@@ -1,19 +1,11 @@
 'use strict'
 // @ts-check
 
-/**
- * @typedef { { [key: string|symbol]: unknown } } PropertyBag
- */
+const { isStore } = require('./helpers')
 
 /**
- * @param {unknown} thing
- * @returns {thing is PropertyBag}
+ * @typedef { import('./helpers').Store } Store
  */
-function isPropertyBag (thing) {
-  if (typeof thing !== 'object') return false
-  if (thing === null) return false
-  return true
-}
 
 const { createHook, executionAsyncResource } = require('async_hooks')
 
@@ -32,7 +24,7 @@ class AsyncResourceStorage {
   }
 
   /**
-   * @return {PropertyBag | undefined}
+   * @return {Store | undefined}
    */
   getStore () {
     if (!this._enabled) return
@@ -40,7 +32,7 @@ class AsyncResourceStorage {
     const resource = this._executionAsyncResource()
 
     const store = resource[this._ddResourceStore]
-    if (!isPropertyBag(store)) {
+    if (!isStore(store)) {
       throw new TypeError('store is not present')
     }
 
@@ -48,7 +40,7 @@ class AsyncResourceStorage {
   }
 
   /**
-   * @param {PropertyBag} store
+   * @param {Store} store
    */
   enterWith (store) {
     this._enable()
@@ -59,7 +51,7 @@ class AsyncResourceStorage {
   }
 
   /**
-   * @param {PropertyBag} store
+   * @param {Store} store
    * @param {function} callback
    * @param {unknown[]} args
    */
@@ -95,7 +87,7 @@ class AsyncResourceStorage {
    * @param {number} _asyncId
    * @param {string} _type
    * @param {number} _triggerAsyncId
-   * @param {PropertyBag} resource
+   * @param {Store} resource
    */
   _init (_asyncId, _type, _triggerAsyncId, resource) {
     const currentResource = this._executionAsyncResource()
@@ -106,11 +98,11 @@ class AsyncResourceStorage {
   }
 
   /**
-   * @returns {PropertyBag}
+   * @returns {Store}
    */
   _executionAsyncResource () {
     const ar = executionAsyncResource()
-    if (!isPropertyBag(ar)) return {}
+    if (!isStore(ar)) return {}
     return ar
   }
 }
