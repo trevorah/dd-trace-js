@@ -39,17 +39,7 @@ class AgentlessCiVisibilityEncoder {
         'env': this.env,
         'service': this.service
       },
-      events: this._events.map(span => {
-        // TODO: REMOVE HACK
-        const formattedSpan = formatSpan(span)
-        if (!formattedSpan.parent_id) {
-          return {
-            parent_id: '0000000000000000',
-            ...formattedSpan
-          }
-        }
-        return formattedSpan
-      })
+      events: this._events.map(formatSpan)
     })
     this.reset()
     return payload

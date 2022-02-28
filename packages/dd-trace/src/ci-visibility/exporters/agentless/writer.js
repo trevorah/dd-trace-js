@@ -61,8 +61,8 @@ function makeRequest (data, url, cb) {
     },
     timeout: 5000
   }
-  if (process.env.DATADOG_API_KEY) {
-    options.headers['dd-api-key'] = process.env.DATADOG_API_KEY
+  if (process.env.DATADOG_API_KEY || process.env.DD_API_KEY) {
+    options.headers['dd-api-key'] = process.env.DATADOG_API_KEY || process.env.DD_API_KEY
   }
 
   options.protocol = url.protocol

@@ -7,8 +7,8 @@ const Scheduler = require('./scheduler')
 
 class AgentlessCiVisibilityExporter {
   constructor (config) {
-    const { flushInterval, tags } = config
-    this._url = new URL(process.env.DD_TRACE_AGENT_PORT ? `http://localhost:${process.env.DD_TRACE_AGENT_PORT}` : 'https://citestcycle-intake.datad0g.com')
+    const { flushInterval, tags, site } = config
+    this._url = new URL(`https://citestcycle-intake.${site}`)
     this._writer = new Writer({ url: this._url, tags })
 
     if (flushInterval > 0) {
