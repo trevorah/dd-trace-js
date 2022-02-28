@@ -1,4 +1,5 @@
 'use strict'
+const retry = require('retry')
 
 const request = require('./request')
 const log = require('../../../log')
@@ -10,6 +11,9 @@ class Writer {
     const { 'runtime-id': runtimeId, env, service } = tags
     this._url = url
     this._encoder = new AgentlessCiVisibilityEncoder({ runtimeId, env, service })
+
+    this._backoffTime = 1000
+    this._backoffTries = 5
   }
 
   append (trace) {
@@ -19,15 +23,27 @@ class Writer {
   }
 
   _sendPayload (data, done) {
-    makeRequest(data, this._url, (err, res) => {
-      if (err) {
-        log.error(err)
+    const operation = retry.operation({
+      retries: this._backoffTries,
+      minTimeout: this._backoffTime,
+      randomize: true
+    })
+
+    operation.attempt((attempt) => {
+      const timeout = this._backoffTime * Math.pow(2, attempt)
+      makeRequest(data, this._url, timeout, (err, res) => {
+        if (operation.retry(err)) {
+          log.error(err)
+          return
+        }
+        if (err) {
+          log.error(err)
+          done()
+          return
+        }
+        log.debug(`Response from the intake: ${res}`)
         done()
-        return
-      }
-      this._encoder.reset()
-      log.debug(`Response from the intake: ${res}`)
-      done()
+      })
     })
   }
 
@@ -52,14 +68,14 @@ class Writer {
   }
 }
 
-function makeRequest (data, url, cb) {
+function makeRequest (data, url, timeout, cb) {
   const options = {
     path: '/api/v2/citestcycle',
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    timeout: 5000
+    timeout
   }
   if (process.env.DATADOG_API_KEY || process.env.DD_API_KEY) {
     options.headers['dd-api-key'] = process.env.DATADOG_API_KEY || process.env.DD_API_KEY
