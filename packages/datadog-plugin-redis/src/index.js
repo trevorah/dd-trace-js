@@ -5,18 +5,58 @@ const { storage } = require('../../datadog-core')
 const analyticsSampler = require('../../dd-trace/src/analytics_sampler')
 const urlFilter = require('../../dd-trace/src/plugins/util/urlfilter')
 
+/**
+ * @typedef { { [key: string]: unknown } } bag
+ */
+
+/**
+ * @param {unknown} obj
+ * @return {obj is bag}
+ */
+function isBag (obj) {
+  if (typeof obj !== 'object') return false
+  if (obj === null) return false
+
+  return true
+}
+
+/**
+ * @callback FilterFn
+ * @param {string} cmd
+ * @returns boolean
+
+/**
+ * @typedef { import('../../dd-trace/src/proxy') } TracerProxy
+ * @typedef { import('../../dd-trace/src/plugins/plugin').PluginConfig } PluginConfig
+ * @typedef { PluginConfig & {
+ *             filter: (cmd: string) => boolean
+ *           } } RedisPluginConfig
+ */
+
+/**
+ * @override
+ * @property {RedisPluginConfig} config
+ */
 class RedisPlugin extends Plugin {
   static get name () {
     return 'redis'
   }
 
-  constructor (...args) {
-    super(...args)
+  /**
+   * @param {TracerProxy} tracer
+   */
+  constructor (tracer) {
+    super(tracer)
+
+    /** @type RedisPluginConfig | undefined */
+    this.config
 
     this.addSub(`apm:${this.constructor.name}:command:start`, (
-      { db, command, args, connectionOptions, connectionName }
+      opts
     ) => {
-      if (!this.config.filter(command)) {
+      if (!isBag(opts)) return this.skip()
+      const { db, command, args, connectionOptions, connectionName } = opts
+      if (!this.config || typeof command !== 'string' || !this.config.filter(command)) {
         return this.skip()
       }
       const store = storage.getStore()
@@ -70,6 +110,9 @@ class RedisPlugin extends Plugin {
     })
   }
 
+  /**
+   * @param {PluginConfig} config
+   */
   configure (config) {
     super.configure(normalizeConfig(config))
   }
@@ -109,6 +152,10 @@ function trim (str, maxlen) {
   return str
 }
 
+/**
+ * @param {PluginConfig} config
+ * @return RedisPluginConfig
+ */
 function normalizeConfig (config) {
   const filter = urlFilter.getFilter(config)
 

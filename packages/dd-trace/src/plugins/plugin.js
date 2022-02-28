@@ -3,9 +3,22 @@
 const dc = require('diagnostics_channel')
 const { storage } = require('../../../datadog-core')
 
+/**
+ * @typedef { import('diagnostics_channel').ChannelListener } ChannelListener
+ * @typedef { import('../../../..').Span } Span
+ * @typedef { import('../proxy') } TracerProxy
+ * @typedef { import('../../../datadog-core/src/storage/async_resource').PropertyBag } PropertyBag
+ * @typedef { { enabled?: boolean, [key: string]: unknown } } PluginConfig
+ */
+
 class Subscription {
+  /**
+   * @param {string} event
+   * @param {ChannelListener} handler
+   */
   constructor (event, handler) {
     this._channel = dc.channel(event)
+    /** @type {ChannelListener} */
     this._handler = (message, name) => {
       const store = storage.getStore()
 
@@ -25,9 +38,14 @@ class Subscription {
 }
 
 module.exports = class Plugin {
+  /**
+   * @param {TracerProxy} tracer
+   */
   constructor (tracer) {
+    /** @type {Subscription[]} */
     this._subscriptions = []
     this._enabled = false
+    /** @type {PropertyBag[]} */
     this._storeStack = []
     this._tracer = tracer
   }
@@ -36,8 +54,15 @@ module.exports = class Plugin {
     return this._tracer._tracer
   }
 
+  /**
+   * @param {Span} span
+   * @param {object} store
+   */
   enter (span, store) {
     store = store || storage.getStore()
+    if (!store) {
+      throw new TypeError('no store');
+    }
     this._storeStack.push(store)
     storage.enterWith({ ...store, span })
   }
@@ -50,13 +75,23 @@ module.exports = class Plugin {
   }
 
   exit () {
-    storage.enterWith(this._storeStack.pop())
+    const oldStore = this._storeStack.pop()
+    if (oldStore) {
+      storage.enterWith(oldStore)
+    }
   }
 
+  /**
+   * @param {string} channelName
+   * @param {ChannelListener} handler
+   */
   addSub (channelName, handler) {
     this._subscriptions.push(new Subscription(channelName, handler))
   }
 
+  /**
+   * @param {PluginConfig} config
+   */
   configure (config) {
     this.config = config
     if (config.enabled && !this._enabled) {
