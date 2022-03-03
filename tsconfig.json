@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "checkJs": true,
+    "allowJs": true,
+    "noEmit": true,
+    "target": "es2020",
+    "moduleResolution": "node",
+    "strict": true,
+    "types": [],
+    "typeRoots": [
+      "./type-overrides/"
+    ]
+  },
+  "files": [
+    "./packages/datadog-plugin-redis/src/index.js"
+  ]
+}

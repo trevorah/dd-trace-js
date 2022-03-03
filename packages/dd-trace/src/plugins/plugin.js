@@ -57,7 +57,7 @@ module.exports = class Plugin {
 
   /**
    * @param {Span} span
-   * @param {Store} store
+   * @param {Store | undefined} store
    */
   enter (span, store) {
     store = store || storage.getStore()

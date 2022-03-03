@@ -13,7 +13,7 @@ const pathSepExpr = new RegExp(`\\${path.sep}`, 'g')
 /** @type { { [name: string]: dc.Channel } } */
 const channelMap = {}
 
-/** @typedef { { name: string, versions: string[]?, file: string? } } Instrumentation */
+/** @typedef { { name: string, versions: string[] | undefined, file: string | undefined } } Instrumentation */
 
 /**
  * @param {string} name
@@ -53,7 +53,7 @@ exports.addHook = function addHook (instrumentation, hook) {
 
 /**
  * @param {string | undefined} version
- * @param {string[]?} ranges
+ * @param {string[] | undefined} ranges
  */
 function matchVersion (version, ranges) {
   return !!(!version || (ranges && ranges.some(range => semver.satisfies(semver.coerce(version), range))))
@@ -75,7 +75,7 @@ function getVersion (moduleBaseDir) {
 
 /**
  * @param {string} name
- * @param {string|undefined} file
+ * @param {string} [file]
  */
 function filename (name, file) {
   return [name, file].filter(val => val).join('/')
@@ -92,12 +92,11 @@ function cjsPostLoad (instrumentation, hook) {
   let pkg
 
   for (let i = 0, l = ids.length; i < l; i++) {
+    const mod = require.cache[ids[i]]
+    if (!mod || !mod.exports) continue
     if (ids[i] === instrumentation.name) {
-      const mod = require.cache[ids[i]]
-      if (mod && mod.exports) {
-        hook(mod.exports)
-        continue
-      }
+      hook(mod.exports)
+      continue
     }
 
     const id = ids[i].replace(pathSepExpr, '/')
@@ -105,7 +104,7 @@ function cjsPostLoad (instrumentation, hook) {
     if (!id.includes(`/node_modules/${instrumentation.name}/`)) continue
 
     if (instrumentation.file) {
-      if (!id.endsWith(`/node_modules/${filename(instrumentation)}`)) continue
+      if (!id.endsWith(`/node_modules/${filename(instrumentation.name, instrumentation.file)}`)) continue
 
       const basedir = getBasedir(ids[i])
 
@@ -115,13 +114,13 @@ function cjsPostLoad (instrumentation, hook) {
 
       pkg = requirePackageJson(basedir, module)
 
-      const mainFile = path.posix.normalize(pkg.main || 'index.js')
+      const mainFile = path.posix.normalize(typeof pkg.main === 'string' ? pkg.main : 'index.js')
       if (!id.endsWith(`/node_modules/${instrumentation.name}/${mainFile}`)) continue
     }
 
-    if (!matchVersion(pkg.version, instrumentation.versions)) continue
+    if (!matchVersion(typeof pkg.version === 'string' ? pkg.version : '', instrumentation.versions)) continue
 
-    hook(require.cache[ids[i]].exports)
+    hook(mod.exports)
   }
 }
 
@@ -130,32 +129,33 @@ function getBasedir (id) {
   return parse(id).basedir.replace(pathSepExpr, '/')
 }
 
-if (semver.satisfies(process.versions.node, '>=16.0.0')) {
-  exports.AsyncResource = AsyncResource
-} else {
-  exports.AsyncResource = class extends AsyncResource {
-    static bind (fn, type, thisArg) {
-      type = type || fn.name
-      return (new exports.AsyncResource(type || 'bound-anonymous-fn')).bind(fn, thisArg)
-    }
+class PolyfilledAsyncResource extends AsyncResource {
+  static bind (fn, type, thisArg) {
+    type = type || fn.name
+    return (new PolyfilledAsyncResource(type || 'bound-anonymous-fn')).bind(fn, thisArg)
+  }
 
-    bind (fn, thisArg = this) {
-      const ret = this.runInAsyncScope.bind(this, fn, thisArg)
-      Object.defineProperties(ret, {
-        'length': {
-          configurable: true,
-          enumerable: false,
-          value: fn.length,
-          writable: false
-        },
-        'asyncResource': {
-          configurable: true,
-          enumerable: true,
-          value: this,
-          writable: true
-        }
-      })
-      return ret
-    }
+  /**
+   * @param {(...args: unknown[]) => unknown} fn
+   * @paran {unknown} thisArg
+   */
+  bind (fn, thisArg = this) {
+    const ret = this.runInAsyncScope.bind(this, fn, thisArg)
+    Object.defineProperties(ret, {
+      'length': {
+        configurable: true,
+        enumerable: false,
+        value: fn.length,
+        writable: false
+      },
+      'asyncResource': {
+        configurable: true,
+        enumerable: true,
+        value: this,
+        writable: true
+      }
+    })
+    return ret
   }
 }
+exports.AsyncResource = PolyfilledAsyncResource

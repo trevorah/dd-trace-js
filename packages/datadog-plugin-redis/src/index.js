@@ -56,6 +56,7 @@ class RedisPlugin extends Plugin {
     ) => {
       if (!isBag(opts)) return this.skip()
       const { db, command, args, connectionOptions, connectionName } = opts
+      const normalizedArgs = Array.isArray(args) ? args : [args]
       if (!this.config || typeof command !== 'string' || !this.config.filter(command)) {
         return this.skip()
       }
@@ -69,7 +70,7 @@ class RedisPlugin extends Plugin {
           'span.type': 'redis',
           'db.type': 'redis',
           'db.name': db || '0',
-          'redis.raw_command': formatCommand(command, args)
+          'redis.raw_command': formatCommand(command, normalizedArgs)
         }
       })
 
