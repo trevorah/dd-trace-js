@@ -7,7 +7,7 @@ const Scheduler = require('../../../exporters/scheduler')
 class AgentlessCiVisibilityExporter {
   constructor (config) {
     const { flushInterval, tags, site } = config
-    this._url = new URL(`https://citestcycle-intake.${site}`)
+    this._url = new URL(process.env.DD_PROXY_HTTPS || `https://citestcycle-intake.${site}`)
     this._writer = new Writer({ url: this._url, tags })
 
     if (flushInterval > 0) {
