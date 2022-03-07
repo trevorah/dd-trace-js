@@ -38,10 +38,6 @@ function isBag (obj) {
  * @property {RedisPluginConfig} config
  */
 class RedisPlugin extends Plugin {
-  static get name () {
-    return 'redis'
-  }
-
   /**
    * @param {TracerProxy} tracer
    */
@@ -74,7 +70,7 @@ class RedisPlugin extends Plugin {
         }
       })
 
-      span.setTag('service.name', this.config.service || `${span.context()._tags['service.name']}-redis`)
+      span.setTag('service.name', this.config.service || `${tracer._tracer._service}-redis`)
 
       analyticsSampler.sample(span, this.config.measured)
 
@@ -122,6 +118,17 @@ class RedisPlugin extends Plugin {
    */
   configure (config) {
     super.configure(normalizeConfig(config))
+  }
+
+  /**
+   * @param {string} newName
+   */
+  static setName (newName) {
+    Object.defineProperty(
+      this,
+      'name',
+      Object.assign(Object.getOwnPropertyDescriptor(this, 'name'), { value: newName })
+    )
   }
 }
 
@@ -181,5 +188,7 @@ function normalizeConfig (config) {
     filter
   })
 }
+
+RedisPlugin.setName('redis')
 
 module.exports = RedisPlugin

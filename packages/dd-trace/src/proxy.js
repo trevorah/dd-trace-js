@@ -18,6 +18,7 @@ class Tracer extends BaseTracer {
     super()
 
     this._initialized = false
+    /** @type DatadogTracer | NoopTracer */
     this._tracer = noop
     this._instrumenter = new Instrumenter(this)
     this._pluginManager = new PluginManager(this)
