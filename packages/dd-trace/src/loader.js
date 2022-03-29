@@ -1,7 +1,8 @@
 'use strict'
 
 const semver = require('semver')
-const Hook = require('../../datadog-instrumentations/src/helpers/hook')
+const hook = require('./ritm')
+const esmHook = require('./iitm')
 const parse = require('module-details-from-path')
 const path = require('path')
 const uniq = require('lodash.uniq')
@@ -17,7 +18,6 @@ class Loader {
 
   reload (plugins) {
     this._plugins = plugins
-    this._patched = []
 
     const instrumentations = Array.from(this._plugins.keys())
       .reduce((prev, current) => prev.concat(current), [])
@@ -29,9 +29,10 @@ class Loader {
       .map(instrumentation => filename(instrumentation)))
 
     this._hook && this._hook.unhook()
-    this._hook = Hook(instrumentedModules, (moduleExports, moduleName, moduleBaseDir) => {
-      return this._hookModule(moduleExports, moduleName, moduleBaseDir)
-    })
+    this._hook = hook(instrumentedModules, this._hookModule.bind(this))
+
+    this._esmHook && this._esmHook.unhook()
+    this._esmHook = esmHook(instrumentedModules, this._hookModule.bind(this))
   }
 
   load (instrumentation, config) {

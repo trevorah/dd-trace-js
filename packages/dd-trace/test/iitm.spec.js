@@ -35,14 +35,9 @@ describe('iitm.js', () => {
       Object.defineProperty(process.versions, 'node', desc)
     })
 
-    it('should export a noop hook', () => {
+    it('should export an empty function', () => {
       expect(iitmjs).to.not.equal(iitm)
-
-      const hook = iitmjs()
-
-      expect(() => hook.unhook()).to.not.throw()
-      expect(() => iitmjs.addHook()).to.not.throw()
-      expect(() => iitmjs.removeHook()).to.not.throw()
+      expect(iitmjs()).to.be.undefined
     })
   })
 })
