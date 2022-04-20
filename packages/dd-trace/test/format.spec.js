@@ -363,17 +363,25 @@ describe('format', () => {
     })
 
     it('should not measure internal spans', () => {
+      spanContext._trace.started.unshift({})
       spanContext._tags['span.kind'] = 'internal'
       trace = format(span)
       expect(trace.metrics).to.not.have.property(MEASURED)
     })
 
-    it('should not measure unknown spans', () => {
+    it('should not measure unknown child spans', () => {
+      spanContext._trace.started.unshift({})
       trace = format(span)
       expect(trace.metrics).to.not.have.property(MEASURED)
     })
 
-    it('should measure non-internal spans', () => {
+    it('should measure top-level spans', () => {
+      trace = format(span)
+      expect(trace.metrics).to.have.property(MEASURED)
+    })
+
+    it('should measure non-internal child spans', () => {
+      spanContext._trace.started.unshift({})
       spanContext._tags['span.kind'] = 'server'
       trace = format(span)
       expect(trace.metrics[MEASURED]).to.equal(1)

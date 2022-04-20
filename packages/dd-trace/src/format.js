@@ -53,8 +53,9 @@ function extractTags (trace, span) {
   const tags = context._tags
   const hostname = context._hostname
   const priority = context._sampling.priority
+  const root = context._trace.started[0]
 
-  if (tags['span.kind'] && tags['span.kind'] !== 'internal') {
+  if (span === root || (tags['span.kind'] && tags['span.kind'] !== 'internal')) {
     addTag({}, trace.metrics, MEASURED, 1)
   }
 
