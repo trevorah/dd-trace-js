@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
-      - run: echo $GITHUB_REPOSITORY
+      - run: git remote -v
       # - id: pkg
       #   run: |
       #     content=`cat ./package.json | tr '\n' ' '`
