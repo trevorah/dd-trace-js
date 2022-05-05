@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - gha-publish-docs
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    needs: ['latest']
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+      - run: echo $GITHUB_REPOSITORY
+      # - id: pkg
+      #   run: |
+      #     content=`cat ./package.json | tr '\n' ' '`
+      #     echo "::set-output name=json::$content"
+      # - run: yarn
+      # - name: Build
+      #   working-directory: docs
+      #   run: |
+      #     yarn
+      #     yarn build
+      # - name: Deploy
+      #   working-directory: docs/out
+      #   run: |
+      #     git init -b main
+      #     git config user.name github-actions
+      #     git config user.email github-actions@github.com
+      #     git remote add origin https://github.com/DataDog/dd-trace-js.git
+      #     git add -A
+      #     git commit -m ${{ fromJson(steps.pkg.outputs.json).version }}
+      #     git push -f origin main:gh-pages
