@@ -55,18 +55,15 @@ async function assertVersions () {
       const plugin = plugins[key]
       if (plugin.prototype instanceof Plugin) {
         const instrumentations = []
-        const instrument = {
-          addHook (instrumentation) {
-            instrumentations.push(instrumentation)
-          }
-        }
         const instPath = path.join(
           __dirname,
           `../packages/datadog-instrumentations/src/${plugin.name}.js`
         )
-        proxyquire.noPreserveCache()(instPath, {
-          './helpers/instrument': instrument
-        })
+        const instrument = require('../packages/datadog-instrumentations/src/helpers/instrument')
+        const { addHook } = instrument
+        instrument.addHook = instrumentation => instrumentations.push(instrumentation)
+        require(instPath)
+        instrument.addHook = addHook
         return instrumentations
       } else {
         return plugin
