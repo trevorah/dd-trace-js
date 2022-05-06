@@ -34,15 +34,12 @@ afterEach(() => {
 
 function loadInst (plugin) {
   const instrumentations = []
-  const instrument = {
-    addHook (instrumentation) {
-      instrumentations.push(instrumentation)
-    }
-  }
   const instPath = path.join(__dirname, `../../../datadog-instrumentations/src/${plugin}.js`)
-  proxyquire.noPreserveCache()(instPath, {
-    './helpers/instrument': instrument
-  })
+  const instrument = require('../../../datadog-instrumentations/src/helpers/instrument')
+  const { addHook } = instrument
+  instrument.addHook = instrumentation => instrumentations.push(instrumentation)
+  proxyquire(instPath, {})
+  instrument.addHook = addHook
   return instrumentations
 }
 

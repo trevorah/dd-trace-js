@@ -6,6 +6,7 @@ const crypto = require('crypto')
 const semver = require('semver')
 const exec = require('./helpers/exec')
 const childProcess = require('child_process')
+const proxyquire = require('proxyquire')
 const plugins = require('../packages/dd-trace/src/plugins')
 const Plugin = require('../packages/dd-trace/src/plugins/plugin')
 const externals = require('../packages/dd-trace/test/plugins/externals')
@@ -61,7 +62,7 @@ async function assertVersions () {
         const instrument = require('../packages/datadog-instrumentations/src/helpers/instrument')
         const { addHook } = instrument
         instrument.addHook = instrumentation => instrumentations.push(instrumentation)
-        require(instPath)
+        proxyquire(instPath, {})
         instrument.addHook = addHook
         return instrumentations
       } else {
